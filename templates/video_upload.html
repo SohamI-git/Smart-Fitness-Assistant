@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Upload Video — YogaAI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">YogaAI</div>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/practice">Practice</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/video_upload">Upload Video</a>
+      <a href="{{ url_for('auth.logout') }}" style="color:#e05252">Logout</a>
+    </div>
+  </nav>
+
+  <div class="summary-page">
+    <h2>Analyse a yoga video</h2>
+    <p style="color:#888;margin-bottom:2rem">
+      Upload a recorded yoga session — the system will detect each pose,
+      check form, and calculate calories.
+    </p>
+
+    <div class="panel-card" style="max-width:600px;margin:0 auto 2rem">
+      <h3>Upload video</h3>
+      <div id="drop-zone" style="border:2px dashed #444;border-radius:12px;
+           padding:2rem;text-align:center;cursor:pointer;margin-bottom:1rem">
+        <p style="color:#888;margin-bottom:0.5rem">Drag & drop or click to select</p>
+        <p style="color:#555;font-size:0.85rem">MP4, MOV, AVI, WEBM — max 500MB</p>
+        <input type="file" id="video-file" accept="video/*"
+               style="display:none" onchange="fileSelected(this)"/>
+      </div>
+
+      <div id="file-info" style="display:none;margin-bottom:1rem;
+           padding:0.8rem;background:#1a1d27;border-radius:8px">
+        <span id="file-name" style="color:#ccc;font-size:0.9rem"></span>
+      </div>
+
+      <button id="btn-analyze" class="btn-primary" style="width:100%"
+              onclick="analyzeVideo()" disabled>
+        Analyze video
+      </button>
+    </div>
+
+    <!-- Progress -->
+    <div id="progress-section" style="display:none;max-width:600px;margin:0 auto 2rem">
+      <div class="panel-card">
+        <h3>Analyzing...</h3>
+        <div style="background:#2d2d3a;border-radius:8px;height:8px;margin:1rem 0">
+          <div id="progress-bar" style="background:#7c6af5;height:8px;
+               border-radius:8px;width:0%;transition:width 0.3s"></div>
+        </div>
+        <p id="progress-text" style="color:#888;font-size:0.9rem;text-align:center">
+          Processing video frames...
+        </p>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="results-section" style="display:none;max-width:800px;margin:0 auto">
+      <div class="summary-stats" style="margin-bottom:1.5rem">
+        <div class="stat-card">
+          <span class="stat-number" id="res-calories">0</span>
+          <span class="stat-label">Total kcal</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number" id="res-poses">0</span>
+          <span class="stat-label">Poses detected</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number" id="res-correct">0</span>
+          <span class="stat-label">Correct poses</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-number" id="res-duration">0</span>
+          <span class="stat-label">Duration (s)</span>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <h3>Pose breakdown</h3>
+        <table class="log-table" id="results-table">
+          <thead>
+            <tr>
+              <th>Time</th><th>Pose</th><th>Duration</th>
+              <th>Score</th><th>Correct</th><th>Calories</th>
+            </tr>
+          </thead>
+          <tbody id="results-body"></tbody>
+        </table>
+      </div>
+
+      <div style="text-align:center;margin-top:1.5rem">
+        <a href="/dashboard" class="btn-primary">View in dashboard</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  const dropZone = document.getElementById("drop-zone");
+  let selectedFile = null;
+
+  dropZone.addEventListener("click", () =>
+    document.getElementById("video-file").click());
+
+  dropZone.addEventListener("dragover", e => {
+    e.preventDefault();
+    dropZone.style.borderColor = "#7c6af5";
+  });
+  dropZone.addEventListener("dragleave", () =>
+    dropZone.style.borderColor = "#444");
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.style.borderColor = "#444";
+    const file = e.dataTransfer.files[0];
+    if (file) setFile(file);
+  });
+
+  function fileSelected(input) {
+    if (input.files[0]) setFile(input.files[0]);
+  }
+
+  function setFile(file) {
+    selectedFile = file;
+    document.getElementById("file-name").textContent =
+      `${file.name}  (${(file.size / 1024 / 1024).toFixed(1)} MB)`;
+    document.getElementById("file-info").style.display = "block";
+    document.getElementById("btn-analyze").disabled = false;
+  }
+
+  async function analyzeVideo() {
+    if (!selectedFile) return;
+
+    document.getElementById("progress-section").style.display = "block";
+    document.getElementById("results-section").style.display  = "none";
+    document.getElementById("btn-analyze").disabled = true;
+
+    // Fake progress (real progress needs SSE — simplified here)
+    let prog = 0;
+    const progressInterval = setInterval(() => {
+      prog = Math.min(prog + 2, 90);
+      document.getElementById("progress-bar").style.width = prog + "%";
+      document.getElementById("progress-text").textContent =
+        prog < 30 ? "Extracting frames..." :
+        prog < 60 ? "Running pose detection..." :
+        prog < 80 ? "Calculating calories..." : "Almost done...";
+    }, 500);
+
+    const formData = new FormData();
+    formData.append("video", selectedFile);
+
+    try {
+      const resp = await fetch("/api/analyze_video", {
+        method: "POST",
+        body:   formData
+      });
+      const data = await resp.json();
+
+      clearInterval(progressInterval);
+      document.getElementById("progress-bar").style.width = "100%";
+
+      if (data.error) {
+        alert("Error: " + data.error);
+        document.getElementById("progress-section").style.display = "none";
+        document.getElementById("btn-analyze").disabled = false;
+        return;
+      }
+
+      setTimeout(() => showResults(data), 500);
+
+    } catch (err) {
+      clearInterval(progressInterval);
+      alert("Upload failed: " + err.message);
+      document.getElementById("btn-analyze").disabled = false;
+    }
+  }
+
+  function showResults(data) {
+    document.getElementById("progress-section").style.display = "none";
+    document.getElementById("results-section").style.display  = "block";
+
+    document.getElementById("res-calories").textContent =
+      data.total_calories.toFixed(3);
+    document.getElementById("res-poses").textContent    = data.total_poses;
+    document.getElementById("res-correct").textContent  = data.correct_poses;
+    document.getElementById("res-duration").textContent = data.duration_sec;
+
+    const tbody = document.getElementById("results-body");
+    tbody.innerHTML = data.pose_logs.map(p => `
+      <tr>
+        <td>${p.start_time}s</td>
+        <td style="text-transform:capitalize">${p.pose}</td>
+        <td>${p.duration_sec}s</td>
+        <td>${p.score}</td>
+        <td class="${p.is_correct ? 'correct' : 'incorrect'}">
+          ${p.is_correct ? "✓" : "✗"}
+        </td>
+        <td>${p.calories} kcal</td>
+      </tr>`).join("");
+
+    document.getElementById("btn-analyze").disabled = false;
+  }
+  </script>
+</body>
+</html>

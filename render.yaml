@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: yoga-pose-detector
+    runtime: docker
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_ENV
+        value: production
+      - key: DATABASE_PATH
+        value: /app/data/yoga_app.db
+    disk:
+      name: yoga-db
+      mountPath: /app/data
+      sizeGB: 1

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Session Summary — YogaAI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">YogaAI</div>
+    <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/practice">Practice</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/video_upload">Upload Video</a>
+        <a href="/auth/logout" style="color:#e05252">
+        Logout ({{ current_user.username }})
+        </a>
+    </div>
+</nav>
+  <div class="summary-page">
+    <h2>Session Summary</h2>
+
+    <div class="summary-stats">
+      <div class="stat-card">
+        <span class="stat-number">{{ summary.total_calories }}</span>
+        <span class="stat-label">Total kcal</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">{{ summary.total_poses }}</span>
+        <span class="stat-label">Poses logged</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">{{ summary.accuracy_pct }}%</span>
+        <span class="stat-label">Correct poses</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">{{ (summary.total_time_sec / 60) | round(1) }}</span>
+        <span class="stat-label">Minutes</span>
+      </div>
+    </div>
+
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Pose</th>
+          <th>Duration</th>
+          <th>Correct</th>
+          <th>Calories</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in summary.session_log %}
+        <tr>
+          <td>{{ entry.timestamp }}</td>
+          <td>{{ entry.pose | title }}</td>
+          <td>{{ entry.duration_sec }}s</td>
+          <td class="{{ 'correct' if entry.is_correct else 'incorrect' }}">
+            {{ '✓' if entry.is_correct else '✗' }}
+          </td>
+          <td>{{ entry.calories }} kcal</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if not summary.session_log %}
+    <p style="text-align:center;color:#888;margin-top:2rem">
+      No poses logged yet. <a href="/practice">Start practicing!</a>
+    </p>
+    {% endif %}
+
+    <div style="text-align:center;margin-top:2rem">
+      <a href="/practice" class="btn-primary">Back to practice</a>
+    </div>
+  </div>
+</body>
+</html>

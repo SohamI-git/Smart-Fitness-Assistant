@@ -1,0 +1,5 @@
+{
+  "best_model": "SVM",
+  "test_accuracy": 0.77,
+  "num_classes": 82
+}

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — YogaAI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">YogaAI</div>
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/practice">Practice</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/video_upload">Upload Video</a>
+      <a href="/auth/logout" style="color:#e05252">Logout ({{ current_user.username }})</a>
+    </div>
+  </nav>
+
+  <div class="dashboard-page">
+
+    <!-- Header row -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+      <div>
+        <h2 style="margin-bottom:4px">Good {{ time_greeting }}, {{ current_user.username }}</h2>
+        <p style="color:#888;font-size:0.9rem">{{ today_str }}</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;background:#1a1d27;
+                  border:1px solid #2d2d3a;border-radius:12px;padding:0.8rem 1.2rem">
+        <span style="font-size:1.4rem">&#128293;</span>
+        <div>
+          <div style="font-size:1.4rem;font-weight:500;color:#f0a500;line-height:1">
+            {{ streak }}
+          </div>
+          <div style="font-size:0.75rem;color:#888">day streak</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TODAY stats -->
+    <div style="margin-bottom:0.6rem">
+      <span style="font-size:0.8rem;color:#888;text-transform:uppercase;
+                   letter-spacing:0.08em">Today's progress</span>
+    </div>
+    <div class="summary-stats" style="margin-bottom:2rem">
+      <div class="stat-card" style="border-color:#7c6af5;border-width:1.5px">
+        <span class="stat-number" style="color:#7c6af5">
+          {{ "%.2f"|format(today_stats.total_calories or 0) }}
+        </span>
+        <span class="stat-label">kcal today</span>
+        {% if totals.calories and totals.calories > 0 %}
+        <span style="font-size:0.75rem;color:#555;margin-top:4px;display:block">
+          {{ "%.0f"|format((today_stats.total_calories or 0) / totals.calories * 100) }}% of all-time
+        </span>
+        {% endif %}
+      </div>
+      <div class="stat-card" style="border-color:#1D9E75;border-width:1.5px">
+        <span class="stat-number" style="color:#1D9E75">
+          {{ today_stats.total_poses or 0 }}
+        </span>
+        <span class="stat-label">poses today</span>
+        {% if today_stats.total_poses and today_stats.total_poses > 0 %}
+        <span style="font-size:0.75rem;color:#555;margin-top:4px;display:block">
+          {{ "%.0f"|format((today_stats.sessions_count or 0)) }} session(s)
+        </span>
+        {% endif %}
+      </div>
+      <div class="stat-card" style="border-color:#378ADD;border-width:1.5px">
+        <span class="stat-number" style="color:#378ADD">
+          {{ "%.0f"|format((today_stats.total_time_sec or 0) / 60) }}
+        </span>
+        <span class="stat-label">minutes today</span>
+      </div>
+      <div class="stat-card" style="border-color:#f0a500;border-width:1.5px">
+        <span class="stat-number" style="color:#f0a500">{{ today_accuracy }}%</span>
+        <span class="stat-label">accuracy today</span>
+      </div>
+    </div>
+
+    <!-- Daily calorie goal progress bar -->
+    <div class="panel-card" style="margin-bottom:2rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem">
+        <h3>Daily calorie goal</h3>
+        <span style="font-size:0.85rem;color:#888">
+          {{ "%.2f"|format(today_stats.total_calories or 0) }} /
+          {{ daily_goal }} kcal
+        </span>
+      </div>
+      <div style="background:#2d2d3a;border-radius:8px;height:12px;overflow:hidden">
+        <div style="background:linear-gradient(90deg,#7c6af5,#1D9E75);
+                    height:12px;border-radius:8px;transition:width 0.5s;
+                    width:{{ [goal_pct, 100]|min }}%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px">
+        <span style="font-size:0.78rem;color:#888">0</span>
+        <span style="font-size:0.78rem;color:
+          {% if goal_pct >= 100 %}#4caf8a{% elif goal_pct >= 50 %}#f0a500{% else %}#888{% endif %}">
+          {% if goal_pct >= 100 %}Goal reached!
+          {% elif goal_pct >= 50 %}Halfway there
+          {% else %}Keep going{% endif %}
+        </span>
+        <span style="font-size:0.78rem;color:#888">{{ daily_goal }} kcal</span>
+      </div>
+    </div>
+
+    <!-- Today's sessions + Hourly chart -->
+    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:1.5rem;margin-bottom:2rem">
+
+      <!-- Today's pose breakdown -->
+      <div class="panel-card">
+        <h3>Today's pose log</h3>
+        {% if today_logs %}
+        <div style="max-height:280px;overflow-y:auto">
+          <table class="log-table">
+            <thead>
+              <tr><th>Time</th><th>Pose</th><th>Score</th><th>Duration</th><th>kcal</th></tr>
+            </thead>
+            <tbody>
+              {% for log in today_logs %}
+              <tr>
+                <td style="color:#888;font-size:0.8rem">
+                  {{ log.logged_at.strftime("%H:%M") }}
+                </td>
+                <td style="text-transform:capitalize;font-size:0.88rem">
+                  {{ log.pose_name }}
+                </td>
+                <td>
+                  <span style="color:
+                    {% if log.score >= 75 %}#4caf8a
+                    {% elif log.score >= 50 %}#f0a500
+                    {% else %}#e05252{% endif %}">
+                    {{ "%.0f"|format(log.score) }}
+                  </span>
+                </td>
+                <td style="color:#888;font-size:0.85rem">{{ "%.0f"|format(log.duration_sec) }}s</td>
+                <td style="color:#4caf8a;font-size:0.85rem">
+                  {{ "%.3f"|format(log.calories) }}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:2rem;color:#555">
+          <p style="font-size:2rem;margin-bottom:0.5rem">&#127775;</p>
+          <p>No poses logged today yet.</p>
+          <a href="/practice" class="btn-primary" style="display:inline-block;margin-top:1rem">
+            Start practicing
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Pose accuracy donut -->
+      <div class="panel-card" style="display:flex;flex-direction:column;align-items:center">
+        <h3 style="align-self:flex-start">Today's accuracy</h3>
+        <div style="position:relative;width:180px;height:180px;margin:1rem auto">
+          <canvas id="accuracyChart"></canvas>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                      text-align:center;pointer-events:none">
+            <div style="font-size:2rem;font-weight:500;color:
+              {% if today_accuracy >= 75 %}#4caf8a
+              {% elif today_accuracy >= 50 %}#f0a500
+              {% else %}#e05252{% endif %}">
+              {{ today_accuracy }}%
+            </div>
+            <div style="font-size:0.75rem;color:#888">correct</div>
+          </div>
+        </div>
+        <div style="text-align:center;font-size:0.85rem;color:#888">
+          {{ today_correct }} correct out of {{ today_stats.total_poses or 0 }} poses
+        </div>
+      </div>
+    </div>
+
+    <!-- All-time stats row -->
+    <div style="margin-bottom:0.6rem">
+      <span style="font-size:0.8rem;color:#888;text-transform:uppercase;
+                   letter-spacing:0.08em">All-time totals</span>
+    </div>
+    <div class="summary-stats" style="margin-bottom:2rem">
+      <div class="stat-card">
+        <span class="stat-number">{{ "%.1f"|format(totals.calories or 0) }}</span>
+        <span class="stat-label">Total kcal</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">{{ totals.poses or 0 }}</span>
+        <span class="stat-label">Total poses</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">{{ totals.sessions or 0 }}</span>
+        <span class="stat-label">Sessions</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">
+          {{ "%.0f"|format((totals.time_sec or 0) / 60) }}
+        </span>
+        <span class="stat-label">Total minutes</span>
+      </div>
+    </div>
+
+    <!-- Top poses all time -->
+    <div class="panel-card">
+      <h3>Most practiced poses (all time)</h3>
+      {% if top_poses %}
+      <table class="log-table">
+        <thead>
+          <tr><th>Pose</th><th>Times practiced</th><th>Avg score</th><th>Best score</th></tr>
+        </thead>
+        <tbody>
+          {% for pose in top_poses %}
+          <tr>
+            <td style="text-transform:capitalize">{{ pose.pose_name }}</td>
+            <td>{{ pose.count }}</td>
+            <td>
+              <span style="color:
+                {% if pose.avg_score >= 75 %}#4caf8a
+                {% elif pose.avg_score >= 50 %}#f0a500
+                {% else %}#e05252{% endif %}">
+                {{ "%.0f"|format(pose.avg_score or 0) }}
+              </span>
+            </td>
+            <td style="color:#4caf8a">{{ "%.0f"|format(pose.best_score or 0) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p style="color:#888;font-size:0.9rem">No data yet.</p>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <script>
+  const acc = {{ today_accuracy }};
+  const rem = 100 - acc;
+  new Chart(document.getElementById("accuracyChart"), {
+    type: "doughnut",
+    data: {
+      datasets: [{
+        data: [acc, rem],
+        backgroundColor: [
+          acc >= 75 ? "#4caf8a" : acc >= 50 ? "#f0a500" : "#e05252",
+          "#2d2d3a"
+        ],
+        borderWidth: 0,
+        cutout: "75%"
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } }
+    }
+  });
+  </script>
+</body>
+</html>

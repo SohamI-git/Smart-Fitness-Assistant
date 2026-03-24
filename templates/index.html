@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Yoga Pose Detection</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+</head>
+<body>
+    <nav class="navbar">
+  <div class="nav-brand">YogaAI</div>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    {% if logged_in %}
+      <a href="/practice">Practice</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/video_upload">Upload Video</a>
+      <a href="/auth/logout" style="color:#e05252">Logout ({{ username }})</a>
+    {% else %}
+      <a href="/auth/login">Login</a>
+      <a href="/auth/register">Register</a>
+    {% endif %}
+  </div>
+</nav>
+
+  <section class="hero">
+    <div class="hero-content">
+      <h1>AI-Powered Yoga Coach</h1>
+      <p>Real-time pose detection, correction guidance, and calorie tracking — powered by machine learning.</p>
+      <a href="/practice" class="btn-primary">Start Practice</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-card">
+        <span class="stat-number">82</span>
+        <span class="stat-label">Yoga Poses</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">77%</span>
+        <span class="stat-label">Model Accuracy</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">33</span>
+        <span class="stat-label">Body Keypoints</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="feature-card">
+      <div class="feature-icon">&#9654;</div>
+      <h3>Real-time Detection</h3>
+      <p>Detects your yoga pose live via webcam using MediaPipe body keypoints.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#10003;</div>
+      <h3>Pose Correction</h3>
+      <p>Compares your joint angles against reference angles and guides you to correct form.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#128293;</div>
+      <h3>Calorie Tracking</h3>
+      <p>Calculates calories burned using MET values per pose and your body weight.</p>
+    </div>
+  </section>
+</body>
+</html>
