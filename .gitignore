@@ -1,0 +1,24 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Dataset (too large for GitHub)
+dataset/
+*.csv
+
+# Database
+yoga_app.db
+
+# Uploads
+static/uploads/
+
+# Mac
+.DS_Store
+
+# Environment
+.env
